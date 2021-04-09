@@ -1,0 +1,22 @@
+#Baseline run configuration
+base:
+    arch_dir: src/models/cifar
+    model_dir: ./output/cifar/resnet32
+    workers: 4
+    description: '0.2'
+    train_batch: 128
+    test_batch: 100
+    epochs: 182
+    learning-rate: 0.1
+    schedule: '91 136'
+    resume: ''
+    arch: resnet32_flat
+    save_checkpoint: 10
+    is_gating: False
+# PruneTrain configuration
+pt: 
+    en_group_lasso: True
+    var_group_lasso_coeff: 0.2
+    sparse_interval: 10
+    threshold: 0.0001
+    reconf_arch: True
