@@ -13,8 +13,6 @@ def accuracy(output, target, topk=(1,)):
     return torch.sum(correct).item() / target.shape[0]
 
 
-cifar_path = '/Users/victor/College/Spring-Quarter/ML-Practice/cifar-10/cifar-10-batches-py'
-
 epochs = 40
 batch_size = 16
 lr = 0.05
@@ -32,7 +30,6 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-
 dataloader = datasets.CIFAR10
 trainset = dataloader(root='./dataset/data/torch', train=True, download=True, transform=transform_train)
 trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=1)
@@ -40,16 +37,16 @@ trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_work
 testset = dataloader(root='./dataset/data/torch', train=False, download=False, transform=transform_test)
 testloader = DataLoader(testset, batch_size=50, shuffle=False, num_workers=1)
 
+
 device = torch.device('cuda:0')
 
 model = CifarNet().to(device)
-# print(f'model device: {model.device}')
-# optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 loss_func = nn.CrossEntropyLoss()
 losses = []
 
-# prune testing
-layer_idx = 4
+# delete a kernel from one layer and its corresponding input channel from the layer in front
+back_layer_idx = 3
 kernel_idx = 25
 
 for ep in range(epochs):
@@ -58,7 +55,6 @@ for ep in range(epochs):
 
     for batch_data, batch_labels in trainloader:
         print('\n----------\n')
-        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
         for name, param in model.named_parameters():
             print(name, list(param.shape))
         
@@ -78,33 +74,31 @@ for ep in range(epochs):
         loss = loss_func(preds, batch_labels)
 
         losses.append(loss.item())
-        # print(loss.item())
         loss.backward()
         optimizer.step()
-
-        all_params = [param for name, param in model.named_parameters()]
         
-        # params to prune
-        param_back = all_params[layer_idx]
-        param_bias_back = all_params[layer_idx + 1]
-        param_front = all_params[layer_idx + 2]
+        # params from which to prune
+        param_back = model._modules[f'conv{back_layer_idx}'].weight
+        param_bias_back = model._modules[f'conv{back_layer_idx}'].bias
+        param_front = model._modules[f'conv{back_layer_idx+1}'].weight
 
         # indexes to keep
         keep_idxs = np.arange(param_front.shape[1])
         keep_idxs = keep_idxs[keep_idxs != kernel_idx]
         
-        # prune desired parameters
-        new_back = nn.Conv2d(64, 99, kernel_size=5, stride=1, padding=2)
-        new_front = nn.Conv2d(99, 170, kernel_size=3, stride=1, padding=1)
+        # new layers to replace
+        new_back = nn.Conv2d(64, 99, kernel_size=5, stride=1, padding=2).to(device)
+        new_front = nn.Conv2d(99, 170, kernel_size=3, stride=1, padding=1).to(device)
 
-        with torch.no_grad()
-            new_back.weight = param_back[keep_idxs,:,:,:]
-            new_back.bias = param_bias_back[keep_idxs]
-            new_front.weight = param_front[:,keep_idxs,:,:]
+        # prune from desired parameters
+        with torch.no_grad():
+            new_back.weight = nn.Parameter(param_back[keep_idxs,:,:,:])
+            new_back.bias = nn.Parameter(param_bias_back[keep_idxs])
+            new_front.weight = nn.Parameter(param_front[:,keep_idxs,:,:])
         
-        # param_back.data = param_back[keep_idxs,:,:,:]
-        # param_bias_back.data = param_bias_back[keep_idxs]
-        # param_front.data = param_front[:,keep_idxs,:,:]
+        # replace original layers with pruned version
+        model._modules['conv3'] = new_back
+        model._modules['conv4'] = new_front
         
         # list sizes to verify
         for i in range(5):
