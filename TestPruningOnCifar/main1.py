@@ -87,8 +87,8 @@ for ep in range(epochs):
         keep_idxs = keep_idxs[keep_idxs != kernel_idx]
         
         # new layers to replace
-        new_back = nn.Conv2d(64, 99, kernel_size=5, stride=1, padding=2).to(device)
-        new_front = nn.Conv2d(99, 170, kernel_size=3, stride=1, padding=1).to(device)
+        new_back = nn.Conv2d(64, keep_idxs.shape[0], kernel_size=5, stride=1, padding=2).to(device)
+        new_front = nn.Conv2d(keep_idxs.shape[0], 170, kernel_size=3, stride=1, padding=1).to(device)
 
         # prune from desired parameters
         with torch.no_grad():
@@ -101,6 +101,7 @@ for ep in range(epochs):
         model._modules['conv4'] = new_front
         
         # list sizes to verify
+        print(f'new channel count: {keep_idxs.shape[0]}')
         for i in range(5):
             print(list(model.state_dict()[f'conv{i+1}.weight'].shape))
         bcount += 1
