@@ -427,6 +427,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         dense_in_ch_idxs = [0]
       else:
         dense_in_ch_idxs = dense_chs[name]['in_chs']
+      
       dense_out_ch_idxs = dense_chs[name]['out_chs']
       num_in_ch, num_out_ch = len(dense_in_ch_idxs), len(dense_out_ch_idxs)
 
@@ -469,8 +470,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         
         param.data = new_param
         optimizer.state[param]['momentum_buffer'].data = new_mom_param
-        print('STATE')
-        print(optimizer.state)
+        
         print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
 
     # Change parameters of non-neural computing layers (BN, biases)

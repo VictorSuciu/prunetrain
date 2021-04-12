@@ -295,7 +295,7 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda):
 
         outputs = model(inputs)
         loss = criterion(outputs, targets)
-        print(f'LOSS DATATYPE: {type(loss)}')
+        
         # lasso penalty
         init_batch = batch_idx == 0 and epoch == 1
 

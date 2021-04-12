@@ -77,12 +77,16 @@ for ep in range(epochs):
         loss.backward()
         optimizer.step()
         
+
+
+        
         # params from which to prune
         param_back = model._modules[f'conv{back_layer_idx}'].weight
         param_bias_back = model._modules[f'conv{back_layer_idx}'].bias
         param_front = model._modules[f'conv{back_layer_idx+1}'].weight
 
         # indexes to keep
+        # 0, 1, 2, 3, 4, 5... N delete kernel_idx
         keep_idxs = np.arange(param_front.shape[1])
         keep_idxs = keep_idxs[keep_idxs != kernel_idx]
         
@@ -97,8 +101,8 @@ for ep in range(epochs):
             new_front.weight = nn.Parameter(param_front[:,keep_idxs,:,:])
         
         # replace original layers with pruned version
-        model._modules['conv3'] = new_back
-        model._modules['conv4'] = new_front
+        model._modules[f'conv{back_layer_idx}'] = new_back
+        model._modules[f'conv{back_layer_idx+1}'] = new_front
         
         # list sizes to verify
         print(f'new channel count: {keep_idxs.shape[0]}')
