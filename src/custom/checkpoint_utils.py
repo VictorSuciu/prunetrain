@@ -404,15 +404,14 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
   # List of layers to remove
   rm_list = []
 
-  #print("==================")
-  #for key in optimizer.state:
-  #  print("==> {}, {}, {}".format(key, type(key), optimizer.state[key]))
-
+  # print("==================")
+  # for key in optimizer.state:
+  # print("==> {}, {}, {}".format(key, type(key), optimizer.state[key]))
+  # print(model._modules["module"]._modules.keys())
   for name, param in model.named_parameters():
-
+    print("opt_mom:",optimizer.state[param].keys())
     # Get Momentum parameters to adjust
     mom_param = optimizer.state[param]['momentum_buffer']
-
     # Change parameters of neural computing layers (Conv, FC) 
     if (('conv' in name) or ('fc' in name)) and ('weight' in name):
 
@@ -427,12 +426,13 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         dense_in_ch_idxs = [0]
       else:
         dense_in_ch_idxs = dense_chs[name]['in_chs']
-      
+        
       dense_out_ch_idxs = dense_chs[name]['out_chs']
       num_in_ch, num_out_ch = len(dense_in_ch_idxs), len(dense_out_ch_idxs)
-
-      #print("===> Dense inchs: [{}], outchs: [{}]".format(num_in_ch, num_out_ch))
-
+      # print("===> Dense inchs: [{}], outchs: [{}]".format(num_in_ch, num_out_ch))
+      # print("===> dense_in_ch_idxs: [{}], dense_out_ch_idxs: [{}]".format(dense_in_ch_idxs, dense_out_ch_idxs))
+      # print("model_modules_items", model._modules.items())
+       
       # Enlist layers with zero channels for removal
       if num_in_ch == 0 or num_out_ch == 0:
         rm_list.append(name)
@@ -442,12 +442,20 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         if len(dims) == 4:
           new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
           new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
-
+          # print("name:", name)
           for in_idx, in_ch in enumerate(sorted(dense_in_ch_idxs)):
             for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
               with torch.no_grad():
                 new_param[out_idx,in_idx,:,:] = param[out_ch,in_ch,:,:]
                 new_mom_param[out_idx,in_idx,:,:] = mom_param[out_ch,in_ch,:,:]
+                
+          # update conv module layer
+          current_layer =  model._modules["module"]._modules[name.split('.')[1]]
+          mod = nn.Conv2d(num_out_ch,num_in_ch, current_layer.kernel_size, current_layer.stride, current_layer.padding, bias = False).cuda()
+          with torch.no_grad():
+            mod.weight = Parameter(new_param)
+            
+          model._modules["module"]._modules[name.split('.')[1]] = mod
 
         # Generate a new dense tensor and replace (FC layer)
         elif len(dims) == 2:
@@ -489,11 +497,13 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
 
       param.data = new_param
       optimizer.state[param]['momentum_buffer'].data = new_mom_param
+
       #print('PARAM')
       #print(optimizer.state[param])
       #print('\nMOMENTUM BUFFER')
       #print(optimizer.state[param]['momentum_buffer'])
       #print("[{}]: {} >> {}".format(name, dims[0], num_out_ch))
+  
 
   # Change moving_mean and moving_var of BN
   for name, buf in model.named_buffers():
@@ -569,4 +579,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
   # Sanity check => Check the changed buffers
   #for name, param in model.named_parameters():
   #  print("===<<< [{}]: {}".format(name, optimizer.state[param]['momentum_buffer'].shape))
+
+  # reset optimizer
+  optimizer = optim.SGD(model.parameters(), lr= 0.1, momentum=0.9, weight_decay=5e-4)
 
