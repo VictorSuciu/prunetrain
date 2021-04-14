@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://azuremlsdk2.blob.core.windows.net/latest/commandJob.schema.json
+experiment_name: cifar100-resnet32-dep-test
+
+command: python cifar.py --dataset cifar100 --arch resnet32_flat --sparse_interval 1 --arch_out_dir1 checkpoints1 --arch_out_dir2 checkpoints2
+code:
+  local_path: ./src
+environment: azureml:test_env_dh:2
+compute:
+  target: azureml:AComputeCluster1
