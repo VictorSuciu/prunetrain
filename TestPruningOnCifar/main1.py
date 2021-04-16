@@ -96,6 +96,10 @@ for ep in range(epochs):
 
         # prune from desired parameters
         with torch.no_grad():
+            # param_back.data = param_back[keep_idxs,:,:,:]
+            # param_bias_back.data = param_bias_back[keep_idxs]
+            # param_front.data = param_front[:,keep_idxs,:,:]
+
             new_back.weight = nn.Parameter(param_back[keep_idxs,:,:,:])
             new_back.bias = nn.Parameter(param_bias_back[keep_idxs])
             new_front.weight = nn.Parameter(param_front[:,keep_idxs,:,:])

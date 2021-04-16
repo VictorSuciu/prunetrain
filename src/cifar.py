@@ -234,22 +234,11 @@ def main():
                                              'cifar',
                                              is_gating=args.is_gating)
             # Reconstruct architecture
-            if args.arch_out_dir2 != None:
-                
-                _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
-                
-                # _genDenseArch = custom_arch_cifar[args.arch]
-                # if 'resnet' in args.arch:
-                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
-                #                 args.arch_name, dense_chs, 
-                #                 chs_map, args.is_gating)
-                # else:
-                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
-                #                 args.arch_name, dense_chs, chs_map)
+            _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
 
-
-        del optimizer
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+            # Re-initialize optimizer
+            del optimizer
+            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
         
         # save model
