@@ -213,6 +213,13 @@ def main():
         adjust_learning_rate(optimizer, epoch)
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch, args.epochs, state['lr']))
+        
+        del optimizer
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+        for name, param in model.named_parameters():
+            if 'conv' in name:
+                print(name, list(param.data.shape))
 
         train_loss, train_acc, lasso_ratio, train_epoch_time = train(trainloader, model, criterion, optimizer, epoch, use_cuda)
         test_loss, test_acc, test_epoch_time = test(testloader, model, criterion, epoch, use_cuda)
@@ -229,7 +236,9 @@ def main():
                                              is_gating=args.is_gating)
             # Reconstruct architecture
             if args.arch_out_dir2 != None:
+                
                 _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
+                
                 # _genDenseArch = custom_arch_cifar[args.arch]
                 # if 'resnet' in args.arch:
                 #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
