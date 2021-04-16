@@ -173,7 +173,7 @@ def main():
     print("==> creating model '{}'".format(args.arch))
     model = models.__dict__[args.arch](num_classes=num_classes)
     model = _DataParallel(model).cuda()
-
+    #model.give_modules(model._modules['module']._modules)
     # Sanity check: print module name and shape
     #for name, param in model.named_parameters():
     #    print("{}, {}".format(name, list(param.shape)))
@@ -214,8 +214,7 @@ def main():
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch, args.epochs, state['lr']))
         
-        del optimizer
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+        
 
         for name, param in model.named_parameters():
             if 'conv' in name:
@@ -249,6 +248,10 @@ def main():
                 #                 args.arch_name, dense_chs, chs_map)
 
 
+        del optimizer
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+        
         # save model
         is_best = test_acc > best_acc
         best_acc = max(test_acc, best_acc)

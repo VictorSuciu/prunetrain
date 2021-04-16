@@ -408,13 +408,13 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
   # print("==================")
   # for key in optimizer.state:
   # print("==> {}, {}, {}".format(key, type(key), optimizer.state[key]))
-  print(model._modules["module"]._modules.keys())
+  # print(model._modules["module"]._modules.keys())
 
 
 
   
   for name, param in model.named_parameters():
-    print(name, list(param.shape))
+    # print(name, list(param.shape))
     # Get Momentum parameters to adjust
     mom_param = optimizer.state[param]['momentum_buffer']
     mom_requires_grad = mom_param.requires_grad
@@ -446,7 +446,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
 
       else:
         # Generate a new dense tensor and replace (Convolution layer)
-        if len(dims) == 4:
+        if len(dims) == 4 and (num_in_ch != param.shape[1] or num_out_ch != param.shape[0]):
           new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
           new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
           # print("name:", name)
@@ -471,8 +471,10 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
             
           model._modules["module"]._modules[name.split('.')[1]] = new_layer
 
+          print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
+
         # Generate a new dense tensor and replace (FC layer)
-        elif len(dims) == 2:
+        elif len(dims) == 2 and (num_in_ch != param.shape[1] or num_out_ch != param.shape[0]):
           new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
           new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
 
@@ -496,13 +498,16 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
             new_layer.bias = Parameter(current_layer.bias[sorted(dense_out_ch_idxs)]).cuda()
             
           model._modules["module"]._modules[name.split('.')[1]] = new_layer
+
+          print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
+          
         else:
           assert True, "Wrong tensor dimension: {} at layer {}".format(dims, name)
         
         # param.data = new_param
         # optimizer.state[param]['momentum_buffer'].data = new_mom_param
         
-        print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
+        
 
     # Change parameters of non-neural computing layers (BN, biases)
     # else:
@@ -535,8 +540,6 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       w_name = name.replace('bn', 'module.conv')+'.weight'
       dense_out_ch_idxs = dense_chs[w_name]['out_chs']
       num_out_ch = len(dense_out_ch_idxs)
-
-      print(name, '\t', w_name, '\t', num_out_ch, '\t', dense_out_ch_idxs)
 
       new_weight = Parameter(torch.Tensor(num_out_ch)).cuda()
       new_bias = Parameter(torch.Tensor(num_out_ch)).cuda()
