@@ -22,6 +22,7 @@ import os
 import shutil
 import time
 import random
+import gc
 
 import torch
 import torch.nn as nn
@@ -237,9 +238,8 @@ def main():
             _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
 
             # Re-initialize optimizer
-            del optimizer
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
+            gc.collect()
         
         # save model
         is_best = test_acc > best_acc

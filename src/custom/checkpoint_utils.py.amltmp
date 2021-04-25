@@ -423,7 +423,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       num_in_ch, num_out_ch = len(dense_in_ch_idxs), len(dense_out_ch_idxs)
        
       # Enlist layers with zero channels for removal
-      if num_in_ch == 0 or num_out_ch == 0:
+      if 'resnet' in arch and (num_in_ch == 0 or num_out_ch == 0):
         rm_list.append(name)
 
       else:
@@ -445,7 +445,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
           current_layer = model._modules["module"]._modules[name.split('.')[1]]
           
           # initialize new pruned conv layer to replace the old one
-          new_layer = nn.Conv2d(num_in_ch, num_out_ch, kernel_size=current_layer.kernel_size, stride=current_layer.stride, padding=current_layer.padding, bias=False).cuda()
+          new_layer = nn.Conv2d(1, 1, kernel_size=current_layer.kernel_size, stride=current_layer.stride, padding=current_layer.padding, bias=False).cuda()
           
           #  set new layer weight
           with torch.no_grad():
@@ -464,7 +464,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
           current_layer = model._modules["module"]._modules[name.split('.')[1]]
           
           # initialize pruned FC layer to replace the old one
-          new_layer = nn.Linear(num_in_ch, num_out_ch)
+          new_layer = nn.Linear(1, 1)
           
           # populate new param
           if ('fc1' in name) or ('fc2' in name):
