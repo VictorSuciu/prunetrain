@@ -22,7 +22,6 @@ import os
 import shutil
 import time
 import random
-import gc
 
 import torch
 import torch.nn as nn
@@ -71,7 +70,7 @@ parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metava
                     help='path to save checkpoint (default: checkpoint)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet32_flat',
+parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet20',
                     choices=model_names, help='model architecture')
 parser.add_argument('--manualSeed', type=int, help='manual seed')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
@@ -174,7 +173,7 @@ def main():
     print("==> creating model '{}'".format(args.arch))
     model = models.__dict__[args.arch](num_classes=num_classes)
     model = _DataParallel(model).cuda()
-    #model.give_modules(model._modules['module']._modules)
+
     # Sanity check: print module name and shape
     #for name, param in model.named_parameters():
     #    print("{}, {}".format(name, list(param.shape)))
@@ -214,19 +213,17 @@ def main():
         adjust_learning_rate(optimizer, epoch)
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch, args.epochs, state['lr']))
-        
-        
-
         for name, param in model.named_parameters():
             if 'conv' in name:
                 print(name, list(param.data.shape))
-
+        
         train_loss, train_acc, lasso_ratio, train_epoch_time = train(trainloader, model, criterion, optimizer, epoch, use_cuda)
         test_loss, test_acc, test_epoch_time = test(testloader, model, criterion, epoch, use_cuda)
 
         # append logger file
         logger.append([state['lr'], train_loss, test_loss, train_acc, test_acc, lasso_ratio, train_epoch_time, test_epoch_time])
-
+        print([state['lr'], train_loss, test_loss, train_acc, test_acc, lasso_ratio, train_epoch_time, test_epoch_time])
+        
         # SparseTrain routine
         if args.en_group_lasso and (epoch % args.sparse_interval == 0):
             # Force weights under threshold to zero
@@ -235,12 +232,18 @@ def main():
                                              'cifar',
                                              is_gating=args.is_gating)
             # Reconstruct architecture
+            # if args.arch_out_dir2 != None:
             _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
-
-            # Re-initialize optimizer
+                # _genDenseArch = custom_arch_cifar[args.arch]
+                # if 'resnet' in args.arch:
+                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
+                #                 args.arch_name, dense_chs, 
+                #                 chs_map, args.is_gating)
+                # else:
+                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
+                #                 args.arch_name, dense_chs, chs_map)
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-            gc.collect()
-        
+
         # save model
         is_best = test_acc > best_acc
         best_acc = max(test_acc, best_acc)
@@ -296,7 +299,7 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda):
 
         outputs = model(inputs)
         loss = criterion(outputs, targets)
-        
+
         # lasso penalty
         init_batch = batch_idx == 0 and epoch == 1
 

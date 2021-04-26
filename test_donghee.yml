@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://azuremlsdk2.blob.core.windows.net/latest/commandJob.schema.json
 experiment_name: Victor_First_Experiment
 
-command: python cifar.py --dataset cifar100 --arch resnet32_flat
+command: python cifar.py --dataset cifar100 --arch alexnet_flat
 code:
   local_path: ./src
 environment: azureml:test_env_dh:2
