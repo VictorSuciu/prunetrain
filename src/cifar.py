@@ -208,6 +208,16 @@ def main():
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
         return
 
+    # for name, param in model.named_parameters():
+    #     if ('conv' in name or 'fc' in name) and 'weight' in name:
+    #         print(name)
+    #         print(type(optimizer.state[param]))
+    #         optimizer.state[param]['momentum_buffer'] = torch.zeros(param.shape)
+    
+    
+
+
+    
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
         adjust_learning_rate(optimizer, epoch)
@@ -232,17 +242,12 @@ def main():
                                              'cifar',
                                              is_gating=args.is_gating)
             # Reconstruct architecture
-            # if args.arch_out_dir2 != None:
-            _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
-                # _genDenseArch = custom_arch_cifar[args.arch]
-                # if 'resnet' in args.arch:
-                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
-                #                 args.arch_name, dense_chs, 
-                #                 chs_map, args.is_gating)
-                # else:
-                #     _genDenseArch(model, args.arch_out_dir1, args.arch_out_dir2, 
-                #                 args.arch_name, dense_chs, chs_map)
+            new_mom_list = _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+            
+            # create momentum params
+            for param, param_mom in new_mom_list:
+                optimizer.state[param]['momentum_buffer'] = param_mom
 
         # save model
         is_best = test_acc > best_acc

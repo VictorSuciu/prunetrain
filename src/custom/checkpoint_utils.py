@@ -399,10 +399,11 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
   print ("[INFO] Squeezing the sparse model to dense one...")
 
   rm_list = []
+  new_mom_list = []
   
   for name, param in model.named_parameters():
     # Get Momentum parameters to adjust
-    # not used anymore: mom_param = optimizer.state[param]['momentum_buffer']
+    mom_param = optimizer.state[param]['momentum_buffer']
 
     # Change parameters of neural computing layers (Conv, FC) 
     if (('conv' in name) or ('fc' in name)) and ('weight' in name):
@@ -432,15 +433,15 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
 
           # new conv param
           new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
-
-          # not used anymore: new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
+          
+          new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
           
           # populate new param
           for in_idx, in_ch in enumerate(sorted(dense_in_ch_idxs)):
             for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
               with torch.no_grad():
                 new_param[out_idx,in_idx,:,:] = param[out_ch,in_ch,:,:]
-                # not used anymore: new_mom_param[out_idx,in_idx,:,:] = mom_param[out_ch,in_ch,:,:]
+                new_mom_param[out_idx,in_idx,:,:] = mom_param[out_ch,in_ch,:,:]
 
           current_layer = model._modules["module"]._modules[name.split('.')[1]]
           
@@ -454,12 +455,15 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
           # replace old conv layer with new one
           model._modules["module"]._modules[name.split('.')[1]] = new_layer
 
+          new_mom_list.append((new_layer.weight, new_mom_param))
+
           print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
 
         # Generate a new dense tensor and replace (FC layer)
         elif len(dims) == 2 and (num_in_ch != param.shape[1] or num_out_ch != param.shape[0]):
           new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
-          # not used anymore: new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
+          
+          new_mom_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
 
           current_layer = model._modules["module"]._modules[name.split('.')[1]]
           
@@ -472,12 +476,12 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
               for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
                 with torch.no_grad():
                   new_param[out_idx,in_idx] = param[out_ch,in_ch]
-                  # not used anymore: new_mom_param[out_idx,in_idx] = mom_param[out_ch,in_ch]
+                  new_mom_param[out_idx,in_idx] = mom_param[out_ch,in_ch]
           else:
             for in_idx, in_ch in enumerate(sorted(dense_in_ch_idxs)):
               with torch.no_grad():
                 new_param[:,in_idx] = param[:,in_ch]
-                # not used anymore: new_mom_param[:,in_idx] = mom_param[:,in_ch]
+                new_mom_param[:,in_idx] = mom_param[:,in_ch]
           
           #  set new layer weight and bias
           with torch.no_grad():
@@ -486,16 +490,17 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
           
           # replace old FC layer with new one
           model._modules["module"]._modules[name.split('.')[1]] = new_layer
-
+          new_mom_list.append((new_layer.weight, new_mom_param))
+          
           print("[{}]: {} >> {}".format(name, dims, list(new_param.shape)))
           
         else:
-          assert True, "Wrong tensor dimension: {} at layer {}".format(dims, name)
-        
+          new_mom_list.append((param, mom_param))
+
         # param.data = new_param
         # optimizer.state[param]['momentum_buffer'].data = new_mom_param
         
-        
+       
 
 
   # Change moving_mean and moving_var of BN
@@ -586,20 +591,4 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
     for idx_adjuster, idx in enumerate(sorted(idxs)):
       del optimizer.param_groups[0]['params'][idx - idx_adjuster]
 
-    # Sanity check => Print out optimizer parameters after change
-    #print ("[INFO] ==== Size of parameter group (After)")
-    #for g in optimizer.param_groups:
-    #  for idx, g2 in enumerate(g['params']):
-    #    print("idx:{}, param_shape:{}".format(idx, list(g2.shape)))
-
-  # Sanity check => Check the changed parameters
-  #for name, param in model.named_parameters():
-  #  print("===>>> [{}]: {}".format(name, list(param.shape)))
-
-  # Sanity check => Check the changed buffers
-  #for name, param in model.named_parameters():
-  #  print("===<<< [{}]: {}".format(name, optimizer.state[param]['momentum_buffer'].shape))
-
-  # reset optimizer
-  
-  #print('optim after state', optimizer.state[param].keys())
+  return new_mom_list
