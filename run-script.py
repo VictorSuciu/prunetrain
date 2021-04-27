@@ -72,7 +72,7 @@ for cur_epoch in range(0, cfg['base']['epochs'], cfg['pt']['sparse_interval']):
     cmd_line += ' --en_group_lasso '        if cfg['pt']['en_group_lasso'] else ''
     cmd_line += ' --arch_out_dir1 '         +cfg['base']['arch_dir']
     cmd_line += ' --arch_out_dir2 '         +arch_out_dir if cfg['pt']['reconf_arch'] else ''
-    cmd_line += ' >> '                      +os.path.join(cfg['base']['model_dir'], cfg['base']['description'])+'.log'
+    # cmd_line += ' >> '                      +os.path.join(cfg['base']['model_dir'], cfg['base']['description'])+'.log'
 
     print (cmd_line)
     os.system(cmd_line)

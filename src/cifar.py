@@ -182,7 +182,8 @@ def main():
     print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # Resume
     title = 'cifar-10-' + args.arch
@@ -208,16 +209,6 @@ def main():
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
         return
 
-    # for name, param in model.named_parameters():
-    #     if ('conv' in name or 'fc' in name) and 'weight' in name:
-    #         print(name)
-    #         print(type(optimizer.state[param]))
-    #         optimizer.state[param]['momentum_buffer'] = torch.zeros(param.shape)
-    
-    
-
-
-    
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
         adjust_learning_rate(optimizer, epoch)
@@ -242,12 +233,9 @@ def main():
                                              'cifar',
                                              is_gating=args.is_gating)
             # Reconstruct architecture
-            new_mom_list = _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
-            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-            
-            # create momentum params
-            for param, param_mom in new_mom_list:
-                optimizer.state[param]['momentum_buffer'] = param_mom
+            # if args.arch_out_dir2 != None:
+            _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
+            optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
         # save model
         is_best = test_acc > best_acc
