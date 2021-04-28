@@ -182,8 +182,7 @@ def main():
     print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters())/1000000.0))
 
     criterion = nn.CrossEntropyLoss()
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     # Resume
     title = 'cifar-10-' + args.arch
@@ -235,7 +234,7 @@ def main():
             # Reconstruct architecture
             # if args.arch_out_dir2 != None:
             _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
-            optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
         # save model
         is_best = test_acc > best_acc
