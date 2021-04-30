@@ -210,7 +210,10 @@ def main():
 
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
-        adjust_learning_rate(optimizer, epoch)
+        # nsight: start profiling
+        # If epoch = 1:
+        #         torch.cuda.cudart().cudaProfilerStart()
+        # adjust_learning_rate(optimizer, epoch)
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch, args.epochs, state['lr']))
         for name, param in model.named_parameters():
@@ -261,6 +264,10 @@ def main():
                     is_best, 
                     checkpoint=args.checkpoint,
                     filename='checkpoint'+str(epoch)+'.tar')
+        # nsight: stop profiling 
+        # If epoch = 10:
+        #         torch.cuda.cudart().cudaProfilerStop()
+        #         exit(1)
     logger.close()
 
     print('Best acc:')
