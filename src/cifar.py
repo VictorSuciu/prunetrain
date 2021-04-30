@@ -213,7 +213,7 @@ def main():
         # nsight: start profiling
         # If epoch = 1:
         #         torch.cuda.cudart().cudaProfilerStart()
-        # adjust_learning_rate(optimizer, epoch)
+        adjust_learning_rate(optimizer, epoch)
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch, args.epochs, state['lr']))
         for name, param in model.named_parameters():
