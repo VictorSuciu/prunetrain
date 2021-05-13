@@ -34,6 +34,7 @@ import torchvision.datasets as datasets
 import models.cifar as models
 
 from utils import Logger, AverageMeter, accuracy, mkdir_p, savefig
+import scripts.calc_cost as calc_cost
 from custom import _makeSparse, _genDenseModel, _DataParallel
 from custom import get_group_lasso_global, get_group_lasso_group
 from custom_arch import *
@@ -216,8 +217,9 @@ def main():
     
     
 
+    train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+    print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
 
-    
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
         adjust_learning_rate(optimizer, epoch)
@@ -229,7 +231,7 @@ def main():
         
         train_loss, train_acc, lasso_ratio, train_epoch_time = train(trainloader, model, criterion, optimizer, epoch, use_cuda)
         test_loss, test_acc, test_epoch_time = test(testloader, model, criterion, epoch, use_cuda)
-
+        print('num momentum params:', len(optimizer.state.keys()))
         # append logger file
         logger.append([state['lr'], train_loss, test_loss, train_acc, test_acc, lasso_ratio, train_epoch_time, test_epoch_time])
         print([state['lr'], train_loss, test_loss, train_acc, test_acc, lasso_ratio, train_epoch_time, test_epoch_time])
@@ -246,8 +248,10 @@ def main():
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
             
             # create momentum params
-            for param, param_mom in new_mom_list:
-                optimizer.state[param]['momentum_buffer'] = param_mom
+            # for param, param_mom in new_mom_list:
+            #     optimizer.state[param]['momentum_buffer'] = param_mom
+            train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+            print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
 
         # save model
         is_best = test_acc > best_acc
