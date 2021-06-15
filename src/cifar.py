@@ -22,6 +22,7 @@ import os
 import shutil
 import time
 import random
+import datetime
 
 import torch
 import torch.nn as nn
@@ -169,6 +170,7 @@ def main():
 
     testset = dataloader(root='./dataset/data/torch', train=False, download=False, transform=transform_test)
     testloader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+    # python run-script.py --data-path Users/ruihab/prunetrain-copy/dataset/data/torch/ILSVRC/Data/CLS-LOC --dataset imagenet --model resnet50 --num-gpus 1 --sparse_interval 10 --var_group_lasso_coeff 0.2 --threshold 0.0001 --epochs 180 --learning-rate 0.1 --train_batch 128 --test_batch 100 --workers 1 --manualSeed 15
 
     # Model
     print("==> creating model '{}'".format(args.arch))
@@ -216,7 +218,7 @@ def main():
     #         optimizer.state[param]['momentum_buffer'] = torch.zeros(param.shape)
     
     
-
+    start_time = datetime.datetime.now()
     train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
     print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
 
@@ -282,6 +284,13 @@ def main():
 
     print('Best acc:')
     print(best_acc)
+
+    end_time = datetime.datetime.now()
+    total_time = end_time - start_time
+    
+    print()
+    print('Total time:')
+    print(total_time.total_seconds())
 
 
 def train(trainloader, model, criterion, optimizer, epoch, use_cuda):

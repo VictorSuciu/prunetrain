@@ -1,0 +1,5 @@
+train transforms
+train loader
+validation transforms
+=> creating model 'resnet50'
+    Total params: 25.56M
