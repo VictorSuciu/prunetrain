@@ -513,7 +513,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       dense_out_ch_idxs = dense_chs[w_name]['out_chs']
       num_out_ch = len(dense_out_ch_idxs)
 
-      if num_out_ch != current_layer.running_mean.shape[0]:
+      if num_out_ch != current_layer.running_mean.shape[0] or True:
         print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
         # new weight and bias params
         new_weight = Parameter(torch.Tensor(num_out_ch)).cuda()
@@ -535,6 +535,19 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         with torch.no_grad():
           new_layer.weight = Parameter(new_weight).cuda()
           new_layer.bias = Parameter(new_bias).cuda()
+        
+        # update the new layer buffers
+        for buf_name, buf in current_layer.named_buffers():
+          if 'running_mean' in name or 'running_var' in name:
+            new_buf = Parameter(torch.Tensor(num_out_ch)).cuda()
+            for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
+              with torch.no_grad():
+                new_buf[out_idx] = buf[out_ch]
+          
+          else:
+            new_buf = buf
+          
+          new_layer._buffers[buf_name] = new_buf
         
         # replace the current BN layer with the new one
         model._modules["module"]._modules[name] = new_layer
