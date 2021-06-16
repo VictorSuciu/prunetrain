@@ -513,7 +513,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       dense_out_ch_idxs = dense_chs[w_name]['out_chs']
       num_out_ch = len(dense_out_ch_idxs)
 
-      if num_out_ch != current_layer.running_mean.shape[0] or True:
+      if num_out_ch != current_layer.running_mean.shape[0]:
         print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
         # new weight and bias params
         new_weight = Parameter(torch.Tensor(num_out_ch)).cuda()
