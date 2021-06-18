@@ -34,6 +34,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import models.cifar as models
 
+from torch.cuda.amp import autocast
+
 from utils import Logger, AverageMeter, accuracy, mkdir_p, savefig
 import scripts.calc_cost as calc_cost
 from custom import _makeSparse, _genDenseModel, _DataParallel
@@ -164,7 +166,7 @@ def main():
 
     trainset = dataloader(root='./dataset/data/torch', train=True, download=True, transform=transform_train)
     trainloader = data.DataLoader(trainset, 
-                                batch_size=args.train_batch, 
+                                batch_size=args.train_batch*2, 
                                 shuffle=True, 
                                 num_workers=args.workers)
 
@@ -314,9 +316,10 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
-
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
+        
+        with autocast():
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
 
         # lasso penalty
         init_batch = batch_idx == 0 and epoch == 1

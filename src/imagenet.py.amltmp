@@ -37,6 +37,8 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import models.imagenet as customized_models
 
+from torch.cuda.amp import autocast
+
 from utils import Logger, AverageMeter, accuracy, mkdir_p
 from custom import _makeSparse, _genDenseModel, _DataParallel
 from custom import get_group_lasso_global, get_group_lasso_group
@@ -189,7 +191,7 @@ def main():
     print('train loader')
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=args.train_batch, 
+        batch_size=args.train_batch*2, 
         shuffle=True,
         num_workers=args.workers, 
         pin_memory=True)
@@ -344,8 +346,9 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda):
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
+        with autocast():
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
 
         # lasso penalty
         init_batch = batch_idx == 0 and epoch == 1
