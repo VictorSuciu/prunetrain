@@ -170,7 +170,6 @@ def main():
 
     testset = dataloader(root='./dataset/data/torch', train=False, download=False, transform=transform_test)
     testloader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
-    # python run-script.py --data-path Users/ruihab/prunetrain-copy/dataset/data/torch/ILSVRC/Data/CLS-LOC --dataset imagenet --model resnet50 --num-gpus 1 --sparse_interval 10 --var_group_lasso_coeff 0.2 --threshold 0.0001 --epochs 180 --learning-rate 0.1 --train_batch 128 --test_batch 100 --workers 1 --manualSeed 15
 
     # Model
     print("==> creating model '{}'".format(args.arch))
@@ -219,8 +218,8 @@ def main():
     
     
     start_time = datetime.datetime.now()
-    train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
-    print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
+    # train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+    # print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
 
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
@@ -245,16 +244,39 @@ def main():
                                              args.threshold_type,
                                              'cifar',
                                              is_gating=args.is_gating)
+            
+            for name, param in model.named_parameters():
+                try:
+                    print(f"Before - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"Before - {name}: no momentum")
+                    pass
+            
             # Reconstruct architecture
             new_mom_list = _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
             
             # create momentum params
-            # for param, param_mom in new_mom_list:
-            #     optimizer.state[param]['momentum_buffer'] = param_mom
-            train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
-            print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
-
+            for name, param, param_mom in new_mom_list:
+                optimizer.state[param]['momentum_buffer'] = param_mom
+                print(f'resetting momentum {name}')
+            
+            for name, param in model.named_parameters():
+                try:
+                    print(f"After - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"After - {name}: no momentum")
+                    pass
+            
+            # train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+            # print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
+        else:
+            for name, param in model.named_parameters():
+                try:
+                    print(f"Non Pruning Epoch - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"Non Pruning Epoch - {name}: no momentum")
+                    pass
         # save model
         is_best = test_acc > best_acc
         best_acc = max(test_acc, best_acc)

@@ -49,7 +49,7 @@ log_tot = {'coeff':[], 'train_cost':[], 'bn_cost':[], 'best_acc':[], 'inf_cost':
 # 6. output channels
 """
 def getTrainingCost(model, arch, gating=False, base=False, verbose=True):
-    fmap = imagenet_feature_size[arch]
+    fmap = cifar_feature_size[arch]
     layer_size_dict = {}
     
     module_list = [m for m in model.modules()][1:]
