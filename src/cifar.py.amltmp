@@ -1,13 +1,10 @@
 """
  Copyright 2019 Sangkug Lym
  Copyright 2019 The University of Texas at Austin
-
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
      http://www.apache.org/licenses/LICENSE-2.0
-
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,8 +30,6 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import models.cifar as models
-
-from torch.cuda.amp import autocast
 
 from utils import Logger, AverageMeter, accuracy, mkdir_p, savefig
 import scripts.calc_cost as calc_cost
@@ -166,13 +161,12 @@ def main():
 
     trainset = dataloader(root='./dataset/data/torch', train=True, download=True, transform=transform_train)
     trainloader = data.DataLoader(trainset, 
-                                batch_size=args.train_batch*2, 
+                                batch_size=args.train_batch, 
                                 shuffle=True, 
                                 num_workers=args.workers)
 
     testset = dataloader(root='./dataset/data/torch', train=False, download=False, transform=transform_test)
     testloader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
-    # python run-script.py --data-path Users/ruihab/prunetrain-copy/dataset/data/torch/ILSVRC/Data/CLS-LOC --dataset imagenet --model resnet50 --num-gpus 1 --sparse_interval 10 --var_group_lasso_coeff 0.2 --threshold 0.0001 --epochs 180 --learning-rate 0.1 --train_batch 128 --test_batch 100 --workers 1 --manualSeed 15
 
     # Model
     print("==> creating model '{}'".format(args.arch))
@@ -247,16 +241,39 @@ def main():
                                              args.threshold_type,
                                              'cifar',
                                              is_gating=args.is_gating)
+            
+            for name, param in model.named_parameters():
+                try:
+                    print(f"Before - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"Before - {name}: no momentum")
+                    pass
+            
             # Reconstruct architecture
             new_mom_list = _genDenseModel(model, dense_chs, optimizer, args.arch, 'cifar')
             optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
             
             # create momentum params
-            # for param, param_mom in new_mom_list:
-            #     optimizer.state[param]['momentum_buffer'] = param_mom
+            for name, param, param_mom in new_mom_list:
+                optimizer.state[param]['momentum_buffer'] = param_mom
+                print(f'resetting momentum {name}')
+            
+            for name, param in model.named_parameters():
+                try:
+                    print(f"After - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"After - {name}: no momentum")
+                    pass
+            
             train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
             print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
-
+        else:
+            for name, param in model.named_parameters():
+                try:
+                    print(f"Non Pruning Epoch - {name}: {list(optimizer.state[param]['momentum_buffer'].shape)}")
+                except:
+                    print(f"Non Pruning Epoch - {name}: no momentum")
+                    pass
         # save model
         is_best = test_acc > best_acc
         best_acc = max(test_acc, best_acc)
@@ -316,10 +333,9 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
-        
-        with autocast():
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
 
         # lasso penalty
         init_batch = batch_idx == 0 and epoch == 1

@@ -1,13 +1,10 @@
 """
  Copyright 2019 Sangkug Lym
  Copyright 2019 The University of Texas at Austin
-
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
      http://www.apache.org/licenses/LICENSE-2.0
-
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,7 +46,7 @@ log_tot = {'coeff':[], 'train_cost':[], 'bn_cost':[], 'best_acc':[], 'inf_cost':
 # 6. output channels
 """
 def getTrainingCost(model, arch, gating=False, base=False, verbose=True):
-    fmap = imagenet_feature_size[arch]
+    fmap = cifar_feature_size[arch]
     layer_size_dict = {}
     
     module_list = [m for m in model.modules()][1:]
@@ -459,5 +456,3 @@ base_archs = {
         'resnet50'           :resnet50,
         'mobilenet'          :mobilenet,
         }
-
-
