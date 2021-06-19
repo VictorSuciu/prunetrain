@@ -47,7 +47,7 @@ for i in range(1,args.num_gpus):
 arch_name = cfg['base']['arch']+'_'+cfg['base']['description']
 arch_out_dir = os.path.join(cfg['base']['model_dir'], 'arch', cfg['base']['description'])
 
-start_time = datetime.datetime.now()
+
 
 # Build command line
 # Iterate reconfiguration intervals
@@ -83,6 +83,4 @@ for cur_epoch in range(0, cfg['base']['epochs'], cfg['pt']['sparse_interval']):
     checkpoint = 'checkpoint.pth.tar'
     cfg['base']['resume'] = os.path.join(cfg['base']['model_dir'], cfg['base']['description'], 'checkpoint.pth.tar')
 
-print()
-print('Total time:')
-print(total_time.total_seconds())
+
