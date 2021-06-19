@@ -528,6 +528,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       w_name = name.replace('bn', 'conv')
       dense_out_ch_idxs = dense_chs[w_name]['out_chs']
       num_out_ch = len(dense_out_ch_idxs)
+<<<<<<< HEAD
       
       current_layer = model._modules["module"]._modules[name.split('.')[1]]
       
@@ -535,6 +536,10 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       mom_param_bias = optimizer.state[current_layer.bias]['momentum_buffer']
       
       if num_out_ch != current_layer.running_mean.shape[0] or True:
+=======
+
+      if num_out_ch != current_layer.running_mean.shape[0]:
+>>>>>>> 5f8124d9c3be495d9a49f68d072631cd0721fc64
         print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
         
         # new weight and bias params
