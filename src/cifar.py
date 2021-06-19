@@ -218,8 +218,8 @@ def main():
     
     
     start_time = datetime.datetime.now()
-    # train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
-    # print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
+    train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+    print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
 
     # Train and val
     for epoch in range(start_epoch, args.epochs+1):
@@ -268,8 +268,8 @@ def main():
                     print(f"After - {name}: no momentum")
                     pass
             
-            # train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
-            # print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
+            train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base = calc_cost.getTrainingCost(model, args.arch, base=True)
+            print('FLOP REPORT:', train_cost_base, bn_cost_base, inf_cost_base, out_act_base, out_chs_base, model_size_base)
         else:
             for name, param in model.named_parameters():
                 try:
