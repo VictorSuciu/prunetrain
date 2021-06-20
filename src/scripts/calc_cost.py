@@ -1,10 +1,13 @@
 """
  Copyright 2019 Sangkug Lym
  Copyright 2019 The University of Texas at Austin
+
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
+
      http://www.apache.org/licenses/LICENSE-2.0
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,11 +52,11 @@ def getTrainingCost(model, arch, gating=False, base=False, verbose=True):
     fmap = cifar_feature_size[arch]
     layer_size_dict = {}
     
-    module_list = [m for m in model.modules()][1:]
+    module_list = [m for m in model._modules['module'].modules()][1:]
     
     
     print('Calculating FLOPS')
-    for name, module in zip(model._modules, module_list):
+    for name, module in zip(model._modules['module']._modules, module_list):
         if 'conv' in name or 'fc' in name:
             size_to_add = list(module.weight.shape)
             if 'fc' in name:
@@ -456,3 +459,5 @@ base_archs = {
         'resnet50'           :resnet50,
         'mobilenet'          :mobilenet,
         }
+
+
