@@ -430,7 +430,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       else:
         # Generate a new dense tensor and replace (Convolution layer)
         if len(dims) == 4:
-          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0])):
+          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0]) or True):
 
             # new conv param
             new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
@@ -465,19 +465,13 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
 
         # Generate a new dense tensor and replace (FC layer)
         elif len(dims) == 2:
-          param_bias = model._modules["module"]._modules[name.split('.')[1]].bias
-          
           mom_param_weight = optimizer.state[param]['momentum_buffer']
-          mom_param_bias = optimizer.state[param_bias]['momentum_buffer']
+          mom_param_bias = optimizer.state[model._modules["module"]._modules[name.split('.')[1]].bias]['momentum_buffer']
           
-          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0])):
+          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0]) or True):
             new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
-            new_param_bias = Parameter(torch.Tensor(num_out_ch)).cuda()
-            
             new_mom_param_weight = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
-            new_mom_param_bias = Parameter(torch.Tensor(num_out_ch)).cuda()
-            print('new_mom_param_bias shape:')
-            print(new_mom_param_bias.shape)
+
             current_layer = model._modules["module"]._modules[name.split('.')[1]]
             
             # initialize pruned FC layer to replace the old one
@@ -495,23 +489,16 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
                 with torch.no_grad():
                   new_param[:,in_idx] = param[:,in_ch]
                   new_mom_param_weight[:,in_idx] = mom_param_weight[:,in_ch]
-              
-              for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
-                with torch.no_grad():
-                  new_param_bias[out_idx] = param_bias[out_ch]
-                  new_mom_param_bias[out_idx] = mom_param_bias[out_ch]    
             
             #  set new layer weight and bias
             with torch.no_grad():
               new_layer.weight = Parameter(new_param).cuda()
-              new_layer.bias = Parameter(new_param_bias).cuda()
+              new_layer.bias = Parameter(current_layer.bias[sorted(dense_out_ch_idxs)]).cuda()
+              new_mom_param_bias = Parameter(mom_param_bias[sorted(dense_out_ch_idxs)]).cuda()
             
             # replace old FC layer with new one
             model._modules["module"]._modules[name.split('.')[1]] = new_layer
 
-            print('new_mom_param_bias shape:')
-            print(new_mom_param_bias.shape)
-            
             new_mom_list.append((name, new_layer.weight, new_mom_param_weight))
             new_mom_list.append((name.replace('weight', 'bias'), new_layer.bias, new_mom_param_bias))
 
@@ -534,7 +521,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       mom_param_weight = optimizer.state[current_layer.weight]['momentum_buffer']
       mom_param_bias = optimizer.state[current_layer.bias]['momentum_buffer']
       
-      if num_out_ch != current_layer.running_mean.shape[0]:
+      if num_out_ch != current_layer.running_mean.shape[0] or True:
         print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
         
         # new weight and bias params
@@ -588,69 +575,6 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
         new_mom_list.append((name, param, mom_param_weight))
         new_mom_list.append((name.replace('weight', 'bias'), current_layer.bias, mom_param_bias)) 
 
-
-  # Change moving_mean and moving_var of BN
-
-  # iterate through modules
-  # for name, current_layer in model._modules["module"].named_modules():
-    
-    # if 'bn' in name:
-    #   w_name = name.replace('bn', 'module.conv')+'.weight'
-    #   dense_out_ch_idxs = dense_chs[w_name]['out_chs']
-    #   num_out_ch = len(dense_out_ch_idxs)
-
-    #   if num_out_ch != current_layer.running_mean.shape[0]:
-    #     print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
-    #     # new weight and bias params
-    #     new_weight = Parameter(torch.Tensor(num_out_ch)).cuda()
-    #     new_bias = Parameter(torch.Tensor(num_out_ch)).cuda()
-        
-    #     mom_param_weight = optimizer.state[current_layer.weight]['momentum_buffer']
-    #     mom_param_bias = optimizer.state[current_layer.bias]['momentum_buffer']
-
-    #     new_mom_param_weight = Parameter(torch.Tensor(num_out_ch)).cuda()
-    #     new_mom_param_bias = Parameter(torch.Tensor(num_out_ch)).cuda()
-
-    #     # new BN layer to replace the old one
-    #     new_layer = nn.BatchNorm2d(num_out_ch).cuda()
-
-    #     # populate new params
-    #     for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
-    #       with torch.no_grad():
-    #         new_layer.running_mean[out_idx] = current_layer.running_mean[out_ch]
-    #         new_layer.running_var[out_idx] = current_layer.running_var[out_ch]
-
-    #         new_weight[out_idx] = current_layer.weight[out_ch]
-    #         new_bias[out_idx] = current_layer.bias[out_ch]
-
-    #         new_mom_param_weight[out_idx] = mom_param_weight[out_ch]
-    #         new_mom_param_bias[out_idx] = mom_param_weight[out_ch]
-
-    #     # set new BN layer's params to the new populated params
-    #     with torch.no_grad():
-    #       new_layer.weight = Parameter(new_weight).cuda()
-    #       new_layer.bias = Parameter(new_bias).cuda()
-        
-    #     # update the new layer buffers
-    #     for buf_name, buf in current_layer.named_buffers():
-    #       if 'running_mean' in buf_name or 'running_var' in buf_name:
-    #         new_buf = Parameter(torch.Tensor(num_out_ch), requires_grad=False).cuda()
-    #         for out_idx, out_ch in enumerate(sorted(dense_out_ch_idxs)):
-    #           with torch.no_grad():
-    #             new_buf[out_idx] = buf[out_ch]
-          
-    #       else:
-    #         new_buf = buf
-          
-    #       print(f'{buf_name} {list(new_buf.shape)}')
-    #       new_layer._buffers[buf_name] = new_buf
-        
-    #     # replace the current BN layer with the new one
-    #     model._modules["module"]._modules[name] = new_layer
-
-    #     new_mom_list.append((name, new_layer.weight, new_mom_param_weight))
-    #     new_mom_list.append((name, new_layer.bias, new_mom_param_bias))
-      
 
 
   """
