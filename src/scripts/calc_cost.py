@@ -52,11 +52,11 @@ def getTrainingCost(model, arch, gating=False, base=False, verbose=True):
     fmap = cifar_feature_size[arch]
     layer_size_dict = {}
     
-    module_list = [m for m in model.modules()][1:]
+    module_list = [m for m in model._modules['module'].modules()][1:]
     
     
     print('Calculating FLOPS')
-    for name, module in zip(model._modules, module_list):
+    for name, module in zip(model._modules['module']._modules, module_list):
         if 'conv' in name or 'fc' in name:
             size_to_add = list(module.weight.shape)
             if 'fc' in name:
