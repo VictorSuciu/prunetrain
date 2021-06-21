@@ -430,7 +430,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       else:
         # Generate a new dense tensor and replace (Convolution layer)
         if len(dims) == 4:
-          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0]) or True):
+          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0])):
 
             # new conv param
             new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch, dims[2], dims[3])).cuda()
@@ -468,7 +468,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
           mom_param_weight = optimizer.state[param]['momentum_buffer']
           mom_param_bias = optimizer.state[model._modules["module"]._modules[name.split('.')[1]].bias]['momentum_buffer']
           
-          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0]) or True):
+          if ((num_in_ch != param.shape[1] or num_out_ch != param.shape[0])):
             new_param = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
             new_mom_param_weight = Parameter(torch.Tensor(num_out_ch, num_in_ch)).cuda()
 
@@ -521,7 +521,7 @@ def _genDenseModel(model, dense_chs, optimizer, arch, dataset):
       mom_param_weight = optimizer.state[current_layer.weight]['momentum_buffer']
       mom_param_bias = optimizer.state[current_layer.bias]['momentum_buffer']
       
-      if num_out_ch != current_layer.running_mean.shape[0] or True:
+      if num_out_ch != current_layer.running_mean.shape[0]:
         print("[{}]: {} >> {}".format(name, current_layer.running_mean.shape[0], num_out_ch))
         
         # new weight and bias params
